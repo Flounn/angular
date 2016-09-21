@@ -13,7 +13,7 @@ import {Observer} from 'rxjs/Observer';
 
 import {ResponseOptions} from '../base_response_options';
 import {ContentType, ReadyState, RequestMethod, ResponseContentType, ResponseType} from '../enums';
-import {isPresent, isString} from '../facade/lang';
+import {isPresent, isBlank, isString} from '../facade/lang';
 import {Headers} from '../headers';
 import {getResponseURL, isSuccess} from '../http_utils';
 import {Connection, ConnectionBackend, XSRFStrategy} from '../interfaces';
@@ -56,7 +56,9 @@ export class XHRConnection implements Connection {
         // response/responseType properties were introduced in ResourceLoader Level2 spec (supported
         // by
         // IE10)
-        let body = isPresent(_xhr.response) ? _xhr.response : _xhr.responseText;
+        // If responseType is specified and not 'text' : the property .responseText give an invalidStateException
+        // the exception is throw when the json is empty
+        let body = isPresent(_xhr.response) ? _xhr.response : (isBlank(_xhr.responseType) || _xhr.responseType==='text') ? _xhr.responseText : null;
         // Implicitly strip a potential XSSI prefix.
         if (isString(body)) body = body.replace(XSSI_PREFIX, '');
         let headers = Headers.fromResponseHeaderString(_xhr.getAllResponseHeaders());
