@@ -102,9 +102,16 @@ function _expandPluralForm(ast: html.Expansion, errors: ParseError[]): html.Elem
 }
 
 function _expandDefaultForm(ast: html.Expansion, errors: ParseError[]): html.Element {
-  let children = ast.cases.map(c => {
+  const children = ast.cases.map(c => {
     const expansionResult = expandNodes(c.expression);
     errors.push(...expansionResult.errors);
+
+    if (c.value === 'other') {
+      // other is the default case when no values match
+      return new html.Element(
+          `template`, [new html.Attribute('ngSwitchDefault', '', c.valueSourceSpan)],
+          expansionResult.nodes, c.sourceSpan, c.sourceSpan, c.sourceSpan);
+    }
 
     return new html.Element(
         `template`, [new html.Attribute('ngSwitchCase', `${c.value}`, c.valueSourceSpan)],

@@ -187,6 +187,7 @@ export interface Route {
     component?: Type<any>;
     data?: Data;
     loadChildren?: LoadChildren;
+    matcher?: UrlMatcher;
     outlet?: string;
     path?: string;
     pathMatch?: string;
@@ -202,6 +203,7 @@ export declare class Router {
     navigated: boolean;
     routerState: RouterState;
     url: string;
+    urlHandlingStrategy: UrlHandlingStrategy;
     constructor(rootComponentType: Type<any>, urlSerializer: UrlSerializer, outletMap: RouterOutletMap, location: Location, injector: Injector, loader: NgModuleFactoryLoader, compiler: Compiler, config: Routes);
     createUrlTree(commands: any[], {relativeTo, queryParams, fragment, preserveQueryParams, preserveFragment}?: NavigationExtras): UrlTree;
     dispose(): void;
@@ -217,6 +219,12 @@ export declare class Router {
 }
 
 /** @stable */
+export declare const ROUTER_CONFIGURATION: OpaqueToken;
+
+/** @experimental */
+export declare const ROUTER_INITIALIZER: OpaqueToken;
+
+/** @stable */
 export declare class RouterLink {
     fragment: string;
     preserveFragment: boolean;
@@ -224,14 +232,17 @@ export declare class RouterLink {
     queryParams: {
         [k: string]: any;
     };
+    replaceUrl: boolean;
     routerLink: any[] | string;
+    skipLocationChange: boolean;
     urlTree: UrlTree;
     constructor(router: Router, route: ActivatedRoute, locationStrategy: LocationStrategy);
-    onClick(button: number, ctrlKey: boolean, metaKey: boolean): boolean;
+    onClick(): boolean;
 }
 
 /** @stable */
 export declare class RouterLinkActive implements OnChanges, OnDestroy, AfterContentInit {
+    isActive: boolean;
     links: QueryList<RouterLink>;
     linksWithHrefs: QueryList<RouterLinkWithHref>;
     routerLinkActive: string[] | string;
@@ -253,11 +264,13 @@ export declare class RouterLinkWithHref implements OnChanges, OnDestroy {
     queryParams: {
         [k: string]: any;
     };
+    replaceUrl: boolean;
     routerLink: any[] | string;
     routerLinkOptions: {
         preserveQueryParams: boolean;
         preserveFragment: boolean;
     };
+    skipLocationChange: boolean;
     target: string;
     urlTree: UrlTree;
     constructor(router: Router, route: ActivatedRoute, locationStrategy: LocationStrategy);
@@ -280,9 +293,11 @@ export declare class RouterOutlet implements OnDestroy {
     component: Object;
     deactivateEvents: EventEmitter<any>;
     isActivated: boolean;
+    locationFactoryResolver: ComponentFactoryResolver;
+    locationInjector: Injector;
     outletMap: RouterOutletMap;
     constructor(parentOutletMap: RouterOutletMap, location: ViewContainerRef, resolver: ComponentFactoryResolver, name: string);
-    activate(activatedRoute: ActivatedRoute, loadedResolver: ComponentFactoryResolver, loadedInjector: Injector, providers: ResolvedReflectiveProvider[], outletMap: RouterOutletMap): void;
+    activate(activatedRoute: ActivatedRoute, resolver: ComponentFactoryResolver, injector: Injector, providers: ResolvedReflectiveProvider[], outletMap: RouterOutletMap): void;
     deactivate(): void;
     ngOnDestroy(): void;
 }
@@ -291,6 +306,14 @@ export declare class RouterOutlet implements OnDestroy {
 export declare class RouterOutletMap {
     registerOutlet(name: string, outlet: RouterOutlet): void;
     removeOutlet(name: string): void;
+}
+
+/** @stable */
+export declare class RouterPreloader {
+    constructor(router: Router, moduleLoader: NgModuleFactoryLoader, compiler: Compiler, injector: Injector, preloadingStrategy: PreloadingStrategy);
+    ngOnDestroy(): void;
+    preload(): Observable<any>;
+    setUpPreloading(): void;
 }
 
 /** @stable */
@@ -322,6 +345,13 @@ export declare class RoutesRecognized {
     toString(): string;
 }
 
+/** @experimental */
+export declare abstract class UrlHandlingStrategy {
+    abstract extract(url: UrlTree): UrlTree;
+    abstract merge(newUrlPart: UrlTree, rawUrl: UrlTree): UrlTree;
+    abstract shouldProcessUrl(url: UrlTree): boolean;
+}
+
 /** @stable */
 export declare class UrlSegment {
     parameters: {
@@ -333,6 +363,23 @@ export declare class UrlSegment {
         parameters: {
         [key: string]: string;
     });
+    toString(): string;
+}
+
+/** @stable */
+export declare class UrlSegmentGroup {
+    children: {
+        [key: string]: UrlSegmentGroup;
+    };
+    numberOfChildren: number;
+    parent: UrlSegmentGroup;
+    segments: UrlSegment[];
+    constructor(
+        segments: UrlSegment[],
+        children: {
+        [key: string]: UrlSegmentGroup;
+    });
+    hasChildren(): boolean;
     toString(): string;
 }
 

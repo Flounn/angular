@@ -6,8 +6,6 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {StringWrapper, isPresent} from '../src/facade/lang';
-
 import {Body} from './body';
 import {ContentType, RequestMethod, ResponseContentType} from './enums';
 import {Headers} from './headers';
@@ -76,13 +74,13 @@ export class Request extends Body {
   constructor(requestOptions: RequestArgs) {
     super();
     // TODO: assert that url is present
-    let url = requestOptions.url;
+    const url = requestOptions.url;
     this.url = requestOptions.url;
-    if (isPresent(requestOptions.search)) {
-      let search = requestOptions.search.toString();
+    if (requestOptions.search) {
+      const search = requestOptions.search.toString();
       if (search.length > 0) {
         let prefix = '?';
-        if (StringWrapper.contains(this.url, '?')) {
+        if (this.url.indexOf('?') != -1) {
           prefix = (this.url[this.url.length - 1] == '&') ? '' : '&';
         }
         // TODO: just delete search-query-looking string in url?
@@ -93,7 +91,6 @@ export class Request extends Body {
     this.method = normalizeMethodName(requestOptions.method);
     // TODO(jeffbcross): implement behavior
     // Defaults to 'omit', consistent with browser
-    // TODO(jeffbcross): implement behavior
     this.headers = new Headers(requestOptions.headers);
     this.contentType = this.detectContentType();
     this.withCredentials = requestOptions.withCredentials;

@@ -7,8 +7,7 @@
  */
 
 import {Optional, Provider, SkipSelf} from '../../di';
-import {ListWrapper} from '../../facade/collection';
-import {getTypeNameForDebugging, isBlank, isPresent} from '../../facade/lang';
+import {getTypeNameForDebugging, isPresent} from '../../facade/lang';
 import {ChangeDetectorRef} from '../change_detector_ref';
 
 
@@ -51,7 +50,7 @@ export class IterableDiffers {
 
   static create(factories: IterableDifferFactory[], parent?: IterableDiffers): IterableDiffers {
     if (isPresent(parent)) {
-      var copied = ListWrapper.clone(parent.factories);
+      const copied = parent.factories.slice();
       factories = factories.concat(copied);
       return new IterableDiffers(factories);
     } else {
@@ -82,7 +81,7 @@ export class IterableDiffers {
     return {
       provide: IterableDiffers,
       useFactory: (parent: IterableDiffers) => {
-        if (isBlank(parent)) {
+        if (!parent) {
           // Typically would occur when calling IterableDiffers.extend inside of dependencies passed
           // to
           // bootstrap(), which would override default pipes instead of extending them.
@@ -96,7 +95,7 @@ export class IterableDiffers {
   }
 
   find(iterable: any): IterableDifferFactory {
-    var factory = this.factories.find(f => f.supports(iterable));
+    const factory = this.factories.find(f => f.supports(iterable));
     if (isPresent(factory)) {
       return factory;
     } else {

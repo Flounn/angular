@@ -9,7 +9,7 @@
 // Some of the code comes from WebComponents.JS
 // https://github.com/webcomponents/webcomponentsjs/blob/master/src/HTMLImports/path.js
 
-import {StringWrapper, isBlank, isPresent} from './facade/lang';
+import {isBlank, isPresent} from './facade/lang';
 
 import {UrlResolver} from './url_resolver';
 
@@ -29,9 +29,9 @@ export function isStyleUrlResolvable(url: string): boolean {
  */
 export function extractStyleUrls(
     resolver: UrlResolver, baseUrl: string, cssText: string): StyleWithImports {
-  var foundUrls: string[] = [];
-  var modifiedCssText = StringWrapper.replaceAllMapped(cssText, _cssImportRe, (m: string[]) => {
-    var url = isPresent(m[1]) ? m[1] : m[2];
+  const foundUrls: string[] = [];
+  const modifiedCssText = cssText.replace(_cssImportRe, function(...m: string[]) {
+    const url = m[1] || m[2];
     if (!isStyleUrlResolvable(url)) {
       // Do not attempt to resolve non-package absolute URLs with URI scheme
       return m[0];
@@ -42,5 +42,5 @@ export function extractStyleUrls(
   return new StyleWithImports(modifiedCssText, foundUrls);
 }
 
-var _cssImportRe = /@import\s+(?:url\()?\s*(?:(?:['"]([^'"]*))|([^;\)\s]*))[^;]*;?/g;
-var _urlWithSchemaRe = /^([^:/?#]+):/;
+const _cssImportRe = /@import\s+(?:url\()?\s*(?:(?:['"]([^'"]*))|([^;\)\s]*))[^;]*;?/g;
+const _urlWithSchemaRe = /^([^:/?#]+):/;

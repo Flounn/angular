@@ -10,7 +10,7 @@ import {interpretStatements} from '@angular/compiler/src/output/output_interpret
 import {jitStatements} from '@angular/compiler/src/output/output_jit';
 import {EventEmitter} from '@angular/core';
 import {ViewType} from '@angular/core/src/linker/view_type';
-import {beforeEach, ddescribe, describe, iit, inject, it, xit} from '@angular/core/testing/testing_internal';
+import {beforeEach, describe, it} from '@angular/core/testing/testing_internal';
 import {getDOM} from '@angular/platform-browser/src/dom/dom_adapter';
 import {browserDetection} from '@angular/platform-browser/testing/browser_util';
 import {expect} from '@angular/platform-browser/testing/matchers';
@@ -20,7 +20,7 @@ import * as untyped from './output_emitter_codegen_untyped';
 import {ExternalClass, codegenStmts} from './output_emitter_util';
 
 export function main() {
-  var outputDefs: any[] /** TODO #9100 */ = [];
+  const outputDefs: any[] /** TODO #9100 */ = [];
   outputDefs.push({
     'getExpressions': () => interpretStatements(codegenStmts, 'getExpressions'),
     'name': 'interpreted'
@@ -43,7 +43,7 @@ export function main() {
   describe('output emitter', () => {
     outputDefs.forEach((outputDef) => {
       describe(`${outputDef['name']}`, () => {
-        var expressions: any /** TODO #9100 */;
+        let expressions: {[k: string]: any};
         beforeEach(() => { expressions = outputDef['getExpressions']()(); });
 
         it('should support literals', () => {
@@ -109,13 +109,16 @@ export function main() {
         });
 
         describe('operators', () => {
-          var ops: any /** TODO #9100 */;
-          var aObj: any /** TODO #9100 */, bObj: any /** TODO #9100 */;
+          let ops: {[k: string]: Function};
+          let aObj: any;
+          let bObj: any;
+
           beforeEach(() => {
             ops = expressions['operators'];
-            aObj = new Object();
-            bObj = new Object();
+            aObj = {};
+            bObj = {};
           });
+
           it('should support ==', () => {
             expect(ops['=='](aObj, aObj)).toBe(true);
             expect(ops['=='](aObj, bObj)).toBe(false);
@@ -181,7 +184,7 @@ export function main() {
         it('should support catching errors', () => {
           function someOperation() { throw new Error('Boom!'); }
 
-          var errorAndStack = expressions['catchError'](someOperation);
+          const errorAndStack = expressions['catchError'](someOperation);
           expect(errorAndStack[0].message).toEqual('Boom!');
           // Somehow we don't get stacktraces on ios7...
           if (!browserDetection.isIOS7 && !browserDetection.isIE) {

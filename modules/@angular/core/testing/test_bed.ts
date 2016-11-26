@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {CompilerOptions, Component, Directive, Injector, ModuleWithComponentFactories, NgModule, NgModuleFactory, NgModuleRef, NgZone, OpaqueToken, Pipe, PlatformRef, Provider, SchemaMetadata, Type} from '@angular/core';
+import {CompilerOptions, Component, Directive, Injector, ModuleWithComponentFactories, NgModule, NgModuleRef, NgZone, OpaqueToken, Pipe, PlatformRef, Provider, SchemaMetadata, Type} from '@angular/core';
 import {AsyncTestCompleter} from './async_test_completer';
 import {ComponentFixture} from './component_fixture';
 import {stringify} from './facade/lang';
@@ -47,7 +47,13 @@ export type TestModuleMetadata = {
 };
 
 /**
- * @experimental
+ * @whatItDoes Configures and initializes environment for unit testing and provides methods for
+ * creating components and services in unit tests.
+ * @description
+ *
+ * TestBed is the primary api for writing unit tests for Angular applications and libraries.
+ *
+ * @stable
  */
 export class TestBed implements Injector {
   /**
@@ -249,7 +255,7 @@ export class TestBed implements Injector {
     }
     if (!this._moduleWithComponentFactories) {
       try {
-        let moduleType = this._createCompilerAndModule();
+        const moduleType = this._createCompilerAndModule();
         this._moduleWithComponentFactories =
             this._compiler.compileModuleAndAllComponentsSync(moduleType);
       } catch (e) {

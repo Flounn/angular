@@ -8,50 +8,49 @@
 
 import {Injectable} from '@angular/core';
 
-import {AnimationCompiler} from '../animation/animation_compiler';
-import {CompileDirectiveMetadata, CompilePipeMetadata} from '../compile_metadata';
+import {AnimationEntryCompileResult} from '../animation/animation_compiler';
+import {CompileDirectiveMetadata, CompilePipeSummary} from '../compile_metadata';
 import {CompilerConfig} from '../config';
 import * as o from '../output/output_ast';
+import {ElementSchemaRegistry} from '../schema/element_schema_registry';
 import {TemplateAst} from '../template_parser/template_ast';
 
 import {CompileElement} from './compile_element';
 import {CompileView} from './compile_view';
+import {ComponentFactoryDependency, DirectiveWrapperDependency, ViewClassDependency} from './deps';
 import {bindView} from './view_binder';
-import {ComponentFactoryDependency, ViewFactoryDependency, buildView, finishView} from './view_builder';
+import {buildView, finishView} from './view_builder';
 
-export {ComponentFactoryDependency, ViewFactoryDependency} from './view_builder';
+export {ComponentFactoryDependency, DirectiveWrapperDependency, ViewClassDependency} from './deps';
 
 export class ViewCompileResult {
   constructor(
-      public statements: o.Statement[], public viewFactoryVar: string,
-      public dependencies: Array<ViewFactoryDependency|ComponentFactoryDependency>) {}
+      public statements: o.Statement[], public viewClassVar: string,
+      public dependencies:
+          Array<ViewClassDependency|ComponentFactoryDependency|DirectiveWrapperDependency>) {}
 }
 
 @Injectable()
 export class ViewCompiler {
-  private _animationCompiler = new AnimationCompiler();
-  constructor(private _genConfig: CompilerConfig) {}
+  constructor(private _genConfig: CompilerConfig, private _schemaRegistry: ElementSchemaRegistry) {}
 
   compileComponent(
       component: CompileDirectiveMetadata, template: TemplateAst[], styles: o.Expression,
-      pipes: CompilePipeMetadata[]): ViewCompileResult {
-    var dependencies: Array<ViewFactoryDependency|ComponentFactoryDependency> = [];
-    var compiledAnimations = this._animationCompiler.compileComponent(component, template);
-    var statements: o.Statement[] = [];
-    var animationTriggers = compiledAnimations.triggers;
-    animationTriggers.forEach(entry => {
-      statements.push(entry.statesMapStatement);
-      statements.push(entry.fnStatement);
-    });
-    var view = new CompileView(
-        component, this._genConfig, pipes, styles, animationTriggers, 0,
+      pipes: CompilePipeSummary[],
+      compiledAnimations: AnimationEntryCompileResult[]): ViewCompileResult {
+    const dependencies:
+        Array<ViewClassDependency|ComponentFactoryDependency|DirectiveWrapperDependency> = [];
+    const view = new CompileView(
+        component, this._genConfig, pipes, styles, compiledAnimations, 0,
         CompileElement.createNull(), []);
+
+    const statements: o.Statement[] = [];
     buildView(view, template, dependencies);
     // Need to separate binding from creation to be able to refer to
     // variables that have been declared after usage.
-    bindView(view, template, compiledAnimations.outputs);
+    bindView(view, template, this._schemaRegistry);
     finishView(view, statements);
 
-    return new ViewCompileResult(statements, view.viewFactory.name, dependencies);
+    return new ViewCompileResult(statements, view.classExpr.name, dependencies);
   }
 }

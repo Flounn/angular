@@ -9,19 +9,17 @@
 import {CompileIdentifierMetadata} from '@angular/compiler/src/compile_metadata';
 import * as o from '@angular/compiler/src/output/output_ast';
 import {TypeScriptEmitter} from '@angular/compiler/src/output/ts_emitter';
-import {beforeEach, ddescribe, describe, expect, iit, inject, it, xit} from '@angular/core/testing/testing_internal';
-
-import {isBlank} from '../../src/facade/lang';
+import {beforeEach, describe, expect, it} from '@angular/core/testing/testing_internal';
 
 import {SimpleJsImportGenerator} from './output_emitter_util';
 
-var someModuleUrl = 'asset:somePackage/lib/somePath';
-var anotherModuleUrl = 'asset:somePackage/lib/someOtherPath';
+const someModuleUrl = 'somePackage/somePath';
+const anotherModuleUrl = 'somePackage/someOtherPath';
 
-var sameModuleIdentifier =
+const sameModuleIdentifier =
     new CompileIdentifierMetadata({name: 'someLocalId', moduleUrl: someModuleUrl});
 
-var externalModuleIdentifier =
+const externalModuleIdentifier =
     new CompileIdentifierMetadata({name: 'someExternalId', moduleUrl: anotherModuleUrl});
 
 export function main() {
@@ -30,8 +28,8 @@ export function main() {
   // - final fields
 
   describe('TypeScriptEmitter', () => {
-    var emitter: TypeScriptEmitter;
-    var someVar: o.ReadVarExpr;
+    let emitter: TypeScriptEmitter;
+    let someVar: o.ReadVarExpr;
 
     beforeEach(() => {
       emitter = new TypeScriptEmitter(new SimpleJsImportGenerator());
@@ -39,7 +37,7 @@ export function main() {
     });
 
     function emitStmt(stmt: o.Statement, exportedVars: string[] = null): string {
-      if (isBlank(exportedVars)) {
+      if (!exportedVars) {
         exportedVars = [];
       }
       return emitter.emitStatements(someModuleUrl, [stmt], exportedVars);
@@ -109,6 +107,12 @@ export function main() {
       expect(emitStmt(o.literalMap([['someKey', o.literal(1)]]).toStmt())).toEqual(`{someKey: 1};`);
     });
 
+    it('should support blank literals', () => {
+      expect(emitStmt(o.literal(null).toStmt())).toEqual('(null as any);');
+      expect(emitStmt(o.literal(undefined).toStmt())).toEqual('(undefined as any);');
+      expect(emitStmt(o.variable('a', null).isBlank().toStmt())).toEqual('(a == null);');
+    });
+
     it('should support external identifiers', () => {
       expect(emitStmt(o.importExpr(sameModuleIdentifier).toStmt())).toEqual('someLocalId;');
       expect(emitStmt(o.importExpr(externalModuleIdentifier).toStmt())).toEqual([
@@ -117,8 +121,8 @@ export function main() {
     });
 
     it('should support operators', () => {
-      var lhs = o.variable('lhs');
-      var rhs = o.variable('rhs');
+      const lhs = o.variable('lhs');
+      const rhs = o.variable('rhs');
       expect(emitStmt(someVar.cast(o.INT_TYPE).toStmt())).toEqual('(<number>someVar);');
       expect(emitStmt(o.not(someVar).toStmt())).toEqual('!someVar;');
       expect(
@@ -169,8 +173,8 @@ export function main() {
     });
 
     it('should support if stmt', () => {
-      var trueCase = o.variable('trueCase').callFn([]).toStmt();
-      var falseCase = o.variable('falseCase').callFn([]).toStmt();
+      const trueCase = o.variable('trueCase').callFn([]).toStmt();
+      const falseCase = o.variable('falseCase').callFn([]).toStmt();
       expect(emitStmt(new o.IfStmt(o.variable('cond'), [trueCase]))).toEqual([
         'if (cond) { trueCase(); }'
       ].join('\n'));
@@ -180,8 +184,9 @@ export function main() {
     });
 
     it('should support try/catch', () => {
-      var bodyStmt = o.variable('body').callFn([]).toStmt();
-      var catchStmt = o.variable('catchFn').callFn([o.CATCH_ERROR_VAR, o.CATCH_STACK_VAR]).toStmt();
+      const bodyStmt = o.variable('body').callFn([]).toStmt();
+      const catchStmt =
+          o.variable('catchFn').callFn([o.CATCH_ERROR_VAR, o.CATCH_STACK_VAR]).toStmt();
       expect(emitStmt(new o.TryCatchStmt([bodyStmt], [catchStmt]))).toEqual([
         'try {', '  body();', '} catch (error) {', '  const stack:any = error.stack;',
         '  catchFn(error,stack);', '}'
@@ -192,7 +197,7 @@ export function main() {
        () => { expect(emitStmt(new o.ThrowStmt(someVar))).toEqual('throw someVar;'); });
 
     describe('classes', () => {
-      var callSomeMethod: o.Statement;
+      let callSomeMethod: o.Statement;
 
       beforeEach(() => { callSomeMethod = o.THIS_EXPR.callMethod('someMethod', []).toStmt(); });
 
@@ -207,7 +212,7 @@ export function main() {
       });
 
       it('should support declaring constructors', () => {
-        var superCall = o.SUPER_EXPR.callFn([o.variable('someParam')]).toStmt();
+        const superCall = o.SUPER_EXPR.callFn([o.variable('someParam')]).toStmt();
         expect(emitStmt(
                    new o.ClassStmt('SomeClass', null, [], [], new o.ClassMethod(null, [], []), [])))
             .toEqual(['class SomeClass {', '  constructor() {', '  }', '}'].join('\n'));
@@ -288,7 +293,7 @@ export function main() {
     });
 
     it('should support builtin types', () => {
-      var writeVarExpr = o.variable('a').set(o.NULL_EXPR);
+      const writeVarExpr = o.variable('a').set(o.NULL_EXPR);
       expect(emitStmt(writeVarExpr.toDeclStmt(o.DYNAMIC_TYPE)))
           .toEqual('var a:any = (null as any);');
       expect(emitStmt(writeVarExpr.toDeclStmt(o.BOOL_TYPE)))
@@ -304,7 +309,7 @@ export function main() {
     });
 
     it('should support external types', () => {
-      var writeVarExpr = o.variable('a').set(o.NULL_EXPR);
+      const writeVarExpr = o.variable('a').set(o.NULL_EXPR);
       expect(emitStmt(writeVarExpr.toDeclStmt(o.importType(sameModuleIdentifier))))
           .toEqual('var a:someLocalId = (null as any);');
       expect(emitStmt(writeVarExpr.toDeclStmt(o.importType(externalModuleIdentifier)))).toEqual([
@@ -314,7 +319,7 @@ export function main() {
     });
 
     it('should support combined types', () => {
-      var writeVarExpr = o.variable('a').set(o.NULL_EXPR);
+      const writeVarExpr = o.variable('a').set(o.NULL_EXPR);
       expect(emitStmt(writeVarExpr.toDeclStmt(new o.ArrayType(null))))
           .toEqual('var a:any[] = (null as any);');
       expect(emitStmt(writeVarExpr.toDeclStmt(new o.ArrayType(o.INT_TYPE))))

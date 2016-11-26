@@ -1,3 +1,11 @@
+/**
+ * @license
+ * Copyright Google Inc. All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://angular.io/license
+ */
+
 import * as ts from 'typescript';
 
 import {MetadataEntry, MetadataError, MetadataGlobalReferenceExpression, MetadataImportedSymbolReferenceExpression, MetadataSymbolicCallExpression, MetadataSymbolicReferenceExpression, MetadataValue, isMetadataError, isMetadataGlobalReferenceExpression, isMetadataImportedSymbolReferenceExpression, isMetadataModuleReferenceExpression, isMetadataSymbolicReferenceExpression, isMetadataSymbolicSpreadExpression} from './schema';
@@ -57,7 +65,7 @@ export interface ImportMetadata {
 
 function getSourceFileOfNode(node: ts.Node): ts.SourceFile {
   while (node && node.kind != ts.SyntaxKind.SourceFile) {
-    node = node.parent
+    node = node.parent;
   }
   return <ts.SourceFile>node;
 }
@@ -70,7 +78,7 @@ export function errorSymbol(
   if (node) {
     sourceFile = sourceFile || getSourceFileOfNode(node);
     if (sourceFile) {
-      let {line, character} =
+      const {line, character} =
           ts.getLineAndCharacterOfPosition(sourceFile, node.getStart(sourceFile));
       result = {__symbolic: 'error', message, line, character};
     };
@@ -252,7 +260,7 @@ export class Evaluator {
           // Handle spread expressions
           if (isMetadataSymbolicSpreadExpression(value)) {
             if (Array.isArray(value.expression)) {
-              for (let spreadValue of value.expression) {
+              for (const spreadValue of value.expression) {
                 arr.push(spreadValue);
               }
               return;
@@ -375,13 +383,13 @@ export class Evaluator {
                         module: left.module,
                         name: qualifiedName.right.text
                       },
-                      node)
+                      node);
                 }
                 // Record a type reference to a declared type as a select.
                 return {__symbolic: 'select', expression: left, member: qualifiedName.right.text};
               } else {
                 const identifier = <ts.Identifier>typeNameNode;
-                let symbol = this.symbols.resolve(identifier.text);
+                const symbol = this.symbols.resolve(identifier.text);
                 if (isMetadataError(symbol) || isMetadataSymbolicReferenceExpression(symbol)) {
                   return recordEntry(symbol, node);
                 }

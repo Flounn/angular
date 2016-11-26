@@ -1,3 +1,11 @@
+/**
+ * @license
+ * Copyright Google Inc. All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://angular.io/license
+ */
+
 import * as ts from 'typescript';
 
 import {Evaluator, errorSymbol, isPrimitive} from './evaluator';
@@ -66,7 +74,7 @@ export class MetadataCollector {
     }
 
     function classMetadataOf(classDeclaration: ts.ClassDeclaration): ClassMetadata {
-      let result: ClassMetadata = {__symbolic: 'class'};
+      const result: ClassMetadata = {__symbolic: 'class'};
 
       function getDecorators(decorators: ts.Decorator[]): MetadataSymbolicExpression[] {
         if (decorators && decorators.length)
@@ -94,7 +102,7 @@ export class MetadataCollector {
       let members: MetadataMap = null;
       function recordMember(name: string, metadata: MemberMetadata) {
         if (!members) members = {};
-        let data = members.hasOwnProperty(name) ? members[name] : [];
+        const data = members.hasOwnProperty(name) ? members[name] : [];
         data.push(metadata);
         members[name] = data;
       }
@@ -197,12 +205,14 @@ export class MetadataCollector {
       switch (node.kind) {
         case ts.SyntaxKind.ClassDeclaration:
           const classDeclaration = <ts.ClassDeclaration>node;
-          const className = classDeclaration.name.text;
-          if (node.flags & ts.NodeFlags.Export) {
-            locals.define(className, {__symbolic: 'reference', name: className});
-          } else {
-            locals.define(
-                className, errorSym('Reference to non-exported class', node, {className}));
+          if (classDeclaration.name) {
+            const className = classDeclaration.name.text;
+            if (node.flags & ts.NodeFlags.Export) {
+              locals.define(className, {__symbolic: 'reference', name: className});
+            } else {
+              locals.define(
+                  className, errorSym('Reference to non-exported class', node, {className}));
+            }
           }
           break;
         case ts.SyntaxKind.FunctionDeclaration:
@@ -210,9 +220,12 @@ export class MetadataCollector {
             // Report references to this function as an error.
             const functionDeclaration = <ts.FunctionDeclaration>node;
             const nameNode = functionDeclaration.name;
-            locals.define(
-                nameNode.text,
-                errorSym('Reference to a non-exported function', nameNode, {name: nameNode.text}));
+            if (nameNode && nameNode.text) {
+              locals.define(
+                  nameNode.text,
+                  errorSym(
+                      'Reference to a non-exported function', nameNode, {name: nameNode.text}));
+            }
           }
           break;
       }
@@ -232,7 +245,7 @@ export class MetadataCollector {
               moduleExport.export = exportDeclaration.exportClause.elements.map(
                   element => element.propertyName ?
                       {name: element.propertyName.text, as: element.name.text} :
-                      element.name.text)
+                      element.name.text);
             }
             if (!exports) exports = [];
             exports.push(moduleExport);
@@ -240,11 +253,15 @@ export class MetadataCollector {
           break;
         case ts.SyntaxKind.ClassDeclaration:
           const classDeclaration = <ts.ClassDeclaration>node;
-          const className = classDeclaration.name.text;
-          if (node.flags & ts.NodeFlags.Export) {
-            if (classDeclaration.decorators) {
+          if (classDeclaration.name) {
+            const className = classDeclaration.name.text;
+            if (node.flags & ts.NodeFlags.Export) {
               if (!metadata) metadata = {};
-              metadata[className] = classMetadataOf(classDeclaration);
+              if (classDeclaration.decorators) {
+                metadata[className] = classMetadataOf(classDeclaration);
+              } else {
+                metadata[className] = {__symbolic: 'class'};
+              }
             }
           }
           // Otherwise don't record metadata for the class.
@@ -254,17 +271,21 @@ export class MetadataCollector {
           // names substitution will be performed by the StaticReflector.
           const functionDeclaration = <ts.FunctionDeclaration>node;
           if (node.flags & ts.NodeFlags.Export) {
+            if (!metadata) metadata = {};
             const maybeFunc = maybeGetSimpleFunction(functionDeclaration);
             if (maybeFunc) {
-              if (!metadata) metadata = {};
               metadata[maybeFunc.name] = recordEntry(maybeFunc.func, node);
+            } else if (functionDeclaration.name.kind == ts.SyntaxKind.Identifier) {
+              const nameNode = <ts.Identifier>functionDeclaration.name;
+              const functionName = nameNode.text;
+              metadata[functionName] = {__symbolic: 'function'};
             }
           }
           break;
         case ts.SyntaxKind.EnumDeclaration:
           if (node.flags & ts.NodeFlags.Export) {
             const enumDeclaration = <ts.EnumDeclaration>node;
-            let enumValueHolder: {[name: string]: MetadataValue} = {};
+            const enumValueHolder: {[name: string]: MetadataValue} = {};
             const enumName = enumDeclaration.name.text;
             let nextDefaultValue: MetadataValue = 0;
             let writtenMembers = 0;
@@ -292,7 +313,7 @@ export class MetadataCollector {
                     __symbolic: 'select',
                     expression: recordEntry({__symbolic: 'reference', name: enumName}, node), name
                   }
-                }
+                };
               } else {
                 nextDefaultValue =
                     recordEntry(errorSym('Unsuppported enum member name', member.name), node);
@@ -306,9 +327,9 @@ export class MetadataCollector {
           break;
         case ts.SyntaxKind.VariableStatement:
           const variableStatement = <ts.VariableStatement>node;
-          for (let variableDeclaration of variableStatement.declarationList.declarations) {
+          for (const variableDeclaration of variableStatement.declarationList.declarations) {
             if (variableDeclaration.name.kind == ts.SyntaxKind.Identifier) {
-              let nameNode = <ts.Identifier>variableDeclaration.name;
+              const nameNode = <ts.Identifier>variableDeclaration.name;
               let varValue: MetadataValue;
               if (variableDeclaration.initializer) {
                 varValue = evaluator.evaluateNode(variableDeclaration.initializer);
@@ -509,13 +530,13 @@ function validateMetadata(
     const entry = metadata[name];
     try {
       if (isClassMetadata(entry)) {
-        validateClass(entry)
+        validateClass(entry);
       }
     } catch (e) {
       const node = nodeMap.get(entry);
       if (shouldReportNode(node)) {
         if (node) {
-          let {line, character} = sourceFile.getLineAndCharacterOfPosition(node.getStart());
+          const {line, character} = sourceFile.getLineAndCharacterOfPosition(node.getStart());
           throw new Error(
               `${sourceFile.fileName}:${line + 1}:${character + 1}: Error encountered in metadata generated for exported symbol '${name}': \n ${e.message}`);
         }
@@ -528,7 +549,7 @@ function validateMetadata(
 
 // Collect parameter names from a function.
 function namesOf(parameters: ts.NodeArray<ts.ParameterDeclaration>): string[] {
-  let result: string[] = [];
+  const result: string[] = [];
 
   function addNamesOf(name: ts.Identifier | ts.BindingPattern) {
     if (name.kind == ts.SyntaxKind.Identifier) {
@@ -536,13 +557,13 @@ function namesOf(parameters: ts.NodeArray<ts.ParameterDeclaration>): string[] {
       result.push(identifier.text);
     } else {
       const bindingPattern = <ts.BindingPattern>name;
-      for (let element of bindingPattern.elements) {
+      for (const element of bindingPattern.elements) {
         addNamesOf(element.name);
       }
     }
   }
 
-  for (let parameter of parameters) {
+  for (const parameter of parameters) {
     addNamesOf(parameter.name);
   }
 

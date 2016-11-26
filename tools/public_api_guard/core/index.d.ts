@@ -109,12 +109,14 @@ export declare class AnimationStyleMetadata extends AnimationMetadata {
 /** @experimental */
 export declare class AnimationTransitionEvent {
     fromState: string;
+    phaseName: string;
     toState: string;
     totalTime: number;
-    constructor({fromState, toState, totalTime}: {
+    constructor({fromState, toState, totalTime, phaseName}: {
         fromState: string;
         toState: string;
         totalTime: number;
+        phaseName: string;
     });
 }
 
@@ -148,7 +150,10 @@ export declare class ApplicationModule {
 export declare abstract class ApplicationRef {
     componentTypes: Type<any>[];
     components: ComponentRef<any>[];
+    viewCount: any;
+    attachView(view: ViewRef): void;
     abstract bootstrap<C>(componentFactory: ComponentFactory<C> | Type<C>): ComponentRef<C>;
+    detachView(view: ViewRef): void;
     abstract tick(): void;
 }
 
@@ -245,7 +250,7 @@ export interface ComponentDecorator {
 export declare class ComponentFactory<C> {
     componentType: Type<any>;
     selector: string;
-    constructor(selector: string, _viewFactory: Function, _componentType: Type<any>);
+    constructor(selector: string, _viewClass: Type<AppView<any>>, _componentType: Type<any>);
     create(injector: Injector, projectableNodes?: any[][], rootSelectorOrNode?: string | any): ComponentRef<C>;
 }
 
@@ -598,6 +603,13 @@ export declare abstract class NgModuleRef<T> {
 }
 
 /** @experimental */
+export declare class NgProbeToken {
+    name: string;
+    token: any;
+    constructor(name: string, token: any);
+}
+
+/** @experimental */
 export declare class NgZone {
     hasPendingMacrotasks: boolean;
     hasPendingMicrotasks: boolean;
@@ -695,6 +707,7 @@ export declare class QueryList<T> {
     last: T;
     length: number;
     filter(fn: (item: T, index: number, array: T[]) => boolean): T[];
+    find(fn: (item: T, index: number, array: T[]) => boolean): T;
     forEach(fn: (item: T, index: number, array: T[]) => void): void;
     map<U>(fn: (item: T, index: number, array: T[]) => U): U[];
     notifyOnChanges(): void;
@@ -746,7 +759,7 @@ export declare class RenderComponentType {
 
 /** @experimental */
 export declare abstract class Renderer {
-    abstract animate(element: any, startingStyles: AnimationStyles, keyframes: AnimationKeyframe[], duration: number, delay: number, easing: string): AnimationPlayer;
+    abstract animate(element: any, startingStyles: AnimationStyles, keyframes: AnimationKeyframe[], duration: number, delay: number, easing: string, previousPlayers?: AnimationPlayer[]): AnimationPlayer;
     abstract attachViewAfter(node: any, viewRootNodes: any[]): void;
     abstract createElement(parentElement: any, name: string, debugInfo?: RenderDebugInfo): any;
     abstract createTemplateAnchor(parentElement: any, debugInfo?: RenderDebugInfo): any;
@@ -916,7 +929,7 @@ export declare const TRANSLATIONS_FORMAT: OpaqueToken;
 export declare function trigger(name: string, animation: AnimationMetadata[]): AnimationEntryMetadata;
 
 /** @stable */
-export declare var Type: FunctionConstructor;
+export declare const Type: FunctionConstructor;
 
 /** @stable */
 export interface TypeDecorator {
@@ -987,7 +1000,7 @@ export declare enum ViewEncapsulation {
 }
 
 /** @stable */
-export declare abstract class ViewRef {
+export declare abstract class ViewRef extends ChangeDetectorRef {
     destroyed: boolean;
     abstract onDestroy(callback: Function): any;
 }

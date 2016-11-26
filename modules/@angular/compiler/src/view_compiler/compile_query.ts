@@ -6,9 +6,9 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {CompileQueryMetadata, CompileTokenMetadata} from '../compile_metadata';
+import {CompileQueryMetadata} from '../compile_metadata';
 import {ListWrapper} from '../facade/collection';
-import {isBlank, isPresent} from '../facade/lang';
+import {isPresent} from '../facade/lang';
 import {Identifiers, resolveIdentifier} from '../identifiers';
 import * as o from '../output/output_ast';
 
@@ -31,23 +31,23 @@ export class CompileQuery {
   }
 
   addValue(value: o.Expression, view: CompileView) {
-    var currentView = view;
-    var elPath: CompileElement[] = [];
+    let currentView = view;
+    const elPath: CompileElement[] = [];
     while (isPresent(currentView) && currentView !== this.view) {
-      var parentEl = currentView.declarationElement;
+      const parentEl = currentView.declarationElement;
       elPath.unshift(parentEl);
       currentView = parentEl.view;
     }
-    var queryListForDirtyExpr = getPropertyInView(this.queryList, view, this.view);
+    const queryListForDirtyExpr = getPropertyInView(this.queryList, view, this.view);
 
-    var viewValues = this._values;
+    let viewValues = this._values;
     elPath.forEach((el) => {
-      var last =
+      const last =
           viewValues.values.length > 0 ? viewValues.values[viewValues.values.length - 1] : null;
       if (last instanceof ViewQueryValues && last.view === el.embeddedView) {
         viewValues = last;
       } else {
-        var newViewValues = new ViewQueryValues(el.embeddedView, []);
+        const newViewValues = new ViewQueryValues(el.embeddedView, []);
         viewValues.values.push(newViewValues);
         viewValues = newViewValues;
       }
@@ -64,11 +64,11 @@ export class CompileQuery {
     return !this._values.values.some(value => value instanceof ViewQueryValues);
   }
 
-  afterChildren(targetStaticMethod: any /** TODO #9100 */, targetDynamicMethod: CompileMethod) {
-    var values = createQueryValues(this._values);
-    var updateStmts = [this.queryList.callMethod('reset', [o.literalArr(values)]).toStmt()];
+  afterChildren(targetStaticMethod: CompileMethod, targetDynamicMethod: CompileMethod) {
+    const values = createQueryValues(this._values);
+    const updateStmts = [this.queryList.callMethod('reset', [o.literalArr(values)]).toStmt()];
     if (isPresent(this.ownerDirectiveExpression)) {
-      var valueExpr = this.meta.first ? this.queryList.prop('first') : this.queryList;
+      const valueExpr = this.meta.first ? this.queryList.prop('first') : this.queryList;
       updateStmts.push(
           this.ownerDirectiveExpression.prop(this.meta.propertyName).set(valueExpr).toStmt());
     }
@@ -91,7 +91,7 @@ function createQueryValues(viewValues: ViewQueryValues): o.Expression[] {
   return ListWrapper.flatten(viewValues.values.map((entry) => {
     if (entry instanceof ViewQueryValues) {
       return mapNestedViews(
-          entry.view.declarationElement.appElement, entry.view, createQueryValues(entry));
+          entry.view.declarationElement.viewContainer, entry.view, createQueryValues(entry));
     } else {
       return <o.Expression>entry;
     }
@@ -99,12 +99,10 @@ function createQueryValues(viewValues: ViewQueryValues): o.Expression[] {
 }
 
 function mapNestedViews(
-    declarationAppElement: o.Expression, view: CompileView,
-    expressions: o.Expression[]): o.Expression {
-  var adjustedExpressions: o.Expression[] = expressions.map((expr) => {
-    return o.replaceVarInExpression(o.THIS_EXPR.name, o.variable('nestedView'), expr);
-  });
-  return declarationAppElement.callMethod('mapNestedViews', [
+    viewContainer: o.Expression, view: CompileView, expressions: o.Expression[]): o.Expression {
+  const adjustedExpressions: o.Expression[] = expressions.map(
+      (expr) => o.replaceVarInExpression(o.THIS_EXPR.name, o.variable('nestedView'), expr));
+  return viewContainer.callMethod('mapNestedViews', [
     o.variable(view.className),
     o.fn(
         [new o.FnParam('nestedView', view.classType)],
@@ -117,7 +115,7 @@ export function createQueryList(
     compileView: CompileView): o.Expression {
   compileView.fields.push(new o.ClassField(
       propertyName, o.importType(resolveIdentifier(Identifiers.QueryList), [o.DYNAMIC_TYPE])));
-  var expr = o.THIS_EXPR.prop(propertyName);
+  const expr = o.THIS_EXPR.prop(propertyName);
   compileView.createMethod.addStmt(
       o.THIS_EXPR.prop(propertyName)
           .set(o.importExpr(resolveIdentifier(Identifiers.QueryList), [o.DYNAMIC_TYPE])
@@ -128,8 +126,8 @@ export function createQueryList(
 
 export function addQueryToTokenMap(map: Map<any, CompileQuery[]>, query: CompileQuery) {
   query.meta.selectors.forEach((selector) => {
-    var entry = map.get(selector.reference);
-    if (isBlank(entry)) {
+    let entry = map.get(selector.reference);
+    if (!entry) {
       entry = [];
       map.set(selector.reference, entry);
     }

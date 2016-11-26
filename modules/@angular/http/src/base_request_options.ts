@@ -8,8 +8,6 @@
 
 import {Injectable} from '@angular/core';
 
-import {isPresent, isString} from '../src/facade/lang';
-
 import {RequestMethod, ResponseContentType} from './enums';
 import {Headers} from './headers';
 import {normalizeMethodName} from './http_utils';
@@ -77,15 +75,14 @@ export class RequestOptions {
   constructor(
       {method, headers, body, url, search, withCredentials,
        responseType}: RequestOptionsArgs = {}) {
-    this.method = isPresent(method) ? normalizeMethodName(method) : null;
-    this.headers = isPresent(headers) ? headers : null;
-    this.body = isPresent(body) ? body : null;
-    this.url = isPresent(url) ? url : null;
-    this.search = isPresent(search) ?
-        (isString(search) ? new URLSearchParams(<string>(search)) : <URLSearchParams>(search)) :
-        null;
-    this.withCredentials = isPresent(withCredentials) ? withCredentials : null;
-    this.responseType = isPresent(responseType) ? responseType : null;
+    this.method = method != null ? normalizeMethodName(method) : null;
+    this.headers = headers != null ? headers : null;
+    this.body = body != null ? body : null;
+    this.url = url != null ? url : null;
+    this.search =
+        search != null ? (typeof search === 'string' ? new URLSearchParams(search) : search) : null;
+    this.withCredentials = withCredentials != null ? withCredentials : null;
+    this.responseType = responseType != null ? responseType : null;
   }
 
   /**
@@ -115,19 +112,18 @@ export class RequestOptions {
    */
   merge(options?: RequestOptionsArgs): RequestOptions {
     return new RequestOptions({
-      method: isPresent(options) && isPresent(options.method) ? options.method : this.method,
-      headers: isPresent(options) && isPresent(options.headers) ? options.headers : this.headers,
-      body: isPresent(options) && isPresent(options.body) ? options.body : this.body,
-      url: isPresent(options) && isPresent(options.url) ? options.url : this.url,
-      search: isPresent(options) && isPresent(options.search) ?
-          (isString(options.search) ? new URLSearchParams(<string>(options.search)) :
-                                      (<URLSearchParams>(options.search)).clone()) :
+      method: options && options.method != null ? options.method : this.method,
+      headers: options && options.headers != null ? options.headers : this.headers,
+      body: options && options.body != null ? options.body : this.body,
+      url: options && options.url != null ? options.url : this.url,
+      search: options && options.search != null ?
+          (typeof options.search === 'string' ? new URLSearchParams(options.search) :
+                                                options.search.clone()) :
           this.search,
-      withCredentials: isPresent(options) && isPresent(options.withCredentials) ?
-          options.withCredentials :
-          this.withCredentials,
-      responseType: isPresent(options) && isPresent(options.responseType) ? options.responseType :
-                                                                            this.responseType
+      withCredentials: options && options.withCredentials != null ? options.withCredentials :
+                                                                    this.withCredentials,
+      responseType: options && options.responseType != null ? options.responseType :
+                                                              this.responseType
     });
   }
 }

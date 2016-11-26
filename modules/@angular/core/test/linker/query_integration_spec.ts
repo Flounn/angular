@@ -43,7 +43,8 @@ export function main() {
         NeedsContentChildWithRead,
         NeedsViewChildrenWithRead,
         NeedsViewChildWithRead,
-        NeedsViewContainerWithRead
+        NeedsViewContainerWithRead,
+        ManualProjecting
       ]
     }));
 
@@ -505,6 +506,25 @@ export function main() {
         expect(q.query4).toBeDefined();
       });
     });
+
+    describe('query over moved templates', () => {
+      it('should include manually projected templates in queries', () => {
+        const template =
+            '<manual-projecting #q><template><div text="1"></div></template></manual-projecting>';
+        const view = createTestCmpAndDetectChanges(MyComp0, template);
+        const q = view.debugElement.children[0].references['q'];
+        expect(q.query.length).toBe(0);
+
+        q.create();
+        view.detectChanges();
+        expect(q.query.map((d: TextDirective) => d.text)).toEqual(['1']);
+
+        q.destroy();
+        view.detectChanges();
+        expect(q.query.length).toBe(0);
+      });
+
+    });
   });
 }
 
@@ -641,8 +661,7 @@ class NeedsQueryAndProject {
 
 @Component({
   selector: 'needs-view-query',
-  template: '<div text="1"><div text="2"></div></div>' +
-      '<div text="3"></div><div text="4"></div>'
+  template: '<div text="1"><div text="2"></div></div><div text="3"></div><div text="4"></div>'
 })
 class NeedsViewQuery {
   @ViewChildren(TextDirective) query: QueryList<TextDirective>;
@@ -751,4 +770,19 @@ class MyComp0 {
 
 @Component({selector: 'my-comp', template: ''})
 class MyCompBroken0 {
+}
+
+@Component({selector: 'manual-projecting', template: '<div #vc></div>'})
+class ManualProjecting {
+  @ContentChild(TemplateRef) template: TemplateRef<any>;
+
+  @ViewChild('vc', {read: ViewContainerRef})
+  vc: ViewContainerRef;
+
+  @ContentChildren(TextDirective)
+  query: QueryList<TextDirective>;
+
+  create() { this.vc.createEmbeddedView(this.template); }
+
+  destroy() { this.vc.clear(); }
 }

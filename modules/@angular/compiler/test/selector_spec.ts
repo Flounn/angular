@@ -58,6 +58,12 @@ export function main() {
       expect(matched).toEqual([s1[0], 1, s2[0], 2]);
     });
 
+    it('should not throw for class name "constructor"', () => {
+      expect(matcher.match(CssSelector.parse('.constructor')[0], selectableCollector))
+          .toEqual(false);
+      expect(matched).toEqual([]);
+    });
+
     it('should select by attr name case sensitive independent of the value', () => {
       matcher.addSelectables(s1 = CssSelector.parse('[someAttr]'), 1);
       matcher.addSelectables(s2 = CssSelector.parse('[someAttr][someAttr2]'), 2);
@@ -99,7 +105,7 @@ export function main() {
     it('should select by attr name only once if the value is from the DOM', () => {
       matcher.addSelectables(s1 = CssSelector.parse('[some-decor]'), 1);
 
-      let elementSelector = new CssSelector();
+      const elementSelector = new CssSelector();
       const element = el('<div attr></div>');
       const empty = getDOM().getAttribute(element, 'attr');
       elementSelector.addAttribute('some-decor', empty);
@@ -158,7 +164,7 @@ export function main() {
     it('should select by many attributes and independent of the value', () => {
       matcher.addSelectables(s1 = CssSelector.parse('input[type=text][control]'), 1);
 
-      let cssSelector = new CssSelector();
+      const cssSelector = new CssSelector();
       cssSelector.setElement('input');
       cssSelector.addAttribute('type', 'text');
       cssSelector.addAttribute('control', 'one');

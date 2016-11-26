@@ -35,23 +35,23 @@ export enum ParseErrorLevel {
   FATAL
 }
 
-export abstract class ParseError {
+export class ParseError {
   constructor(
       public span: ParseSourceSpan, public msg: string,
       public level: ParseErrorLevel = ParseErrorLevel.FATAL) {}
 
   toString(): string {
-    var source = this.span.start.file.content;
-    var ctxStart = this.span.start.offset;
-    var contextStr = '';
-    var details = '';
+    const source = this.span.start.file.content;
+    let ctxStart = this.span.start.offset;
+    let contextStr = '';
+    let details = '';
     if (isPresent(ctxStart)) {
       if (ctxStart > source.length - 1) {
         ctxStart = source.length - 1;
       }
-      var ctxEnd = ctxStart;
-      var ctxLen = 0;
-      var ctxLines = 0;
+      let ctxEnd = ctxStart;
+      let ctxLen = 0;
+      let ctxLines = 0;
 
       while (ctxLen < 100 && ctxStart > 0) {
         ctxStart--;
@@ -75,7 +75,7 @@ export abstract class ParseError {
         }
       }
 
-      let context = source.substring(ctxStart, this.span.start.offset) + '[ERROR ->]' +
+      const context = source.substring(ctxStart, this.span.start.offset) + '[ERROR ->]' +
           source.substring(this.span.start.offset, ctxEnd + 1);
       contextStr = ` ("${context}")`;
     }

@@ -8,24 +8,20 @@
 
 
 import {CompileIdentifierMetadata} from '../compile_metadata';
-import {isArray, isBlank, isPresent} from '../facade/lang';
+import {isBlank, isPresent} from '../facade/lang';
 
 import {AbstractEmitterVisitor, CATCH_ERROR_VAR, CATCH_STACK_VAR, EmitterVisitorContext, OutputEmitter} from './abstract_emitter';
 import * as o from './output_ast';
-import {ImportGenerator} from './path_util';
+import {ImportResolver} from './path_util';
 
-var _debugModuleUrl = 'asset://debug/lib';
+const _debugModuleUrl = '/debug/lib';
 
 export function debugOutputAstAsTypeScript(ast: o.Statement | o.Expression | o.Type | any[]):
     string {
-  var converter = new _TsEmitterVisitor(_debugModuleUrl);
-  var ctx = EmitterVisitorContext.createRoot([]);
-  var asts: any[];
-  if (isArray(ast)) {
-    asts = <any[]>ast;
-  } else {
-    asts = [ast];
-  }
+  const converter = new _TsEmitterVisitor(_debugModuleUrl);
+  const ctx = EmitterVisitorContext.createRoot([]);
+  const asts: any[] = Array.isArray(ast) ? ast : [ast];
+
   asts.forEach((ast) => {
     if (ast instanceof o.Statement) {
       ast.visitStatement(converter, ctx);
@@ -41,17 +37,17 @@ export function debugOutputAstAsTypeScript(ast: o.Statement | o.Expression | o.T
 }
 
 export class TypeScriptEmitter implements OutputEmitter {
-  constructor(private _importGenerator: ImportGenerator) {}
+  constructor(private _importGenerator: ImportResolver) {}
   emitStatements(moduleUrl: string, stmts: o.Statement[], exportedVars: string[]): string {
-    var converter = new _TsEmitterVisitor(moduleUrl);
-    var ctx = EmitterVisitorContext.createRoot(exportedVars);
+    const converter = new _TsEmitterVisitor(moduleUrl);
+    const ctx = EmitterVisitorContext.createRoot(exportedVars);
     converter.visitAllStatements(stmts, ctx);
-    var srcParts: any[] /** TODO #9100 */ = [];
+    const srcParts: string[] = [];
     converter.importsWithPrefixes.forEach((prefix, importedModuleUrl) => {
       // Note: can't write the real word for import as it screws up system.js auto detection...
       srcParts.push(
           `imp` +
-          `ort * as ${prefix} from '${this._importGenerator.getImportPath(moduleUrl, importedModuleUrl)}';`);
+          `ort * as ${prefix} from '${this._importGenerator.fileNameToModuleName(importedModuleUrl, moduleUrl)}';`);
     });
     srcParts.push(ctx.toSource());
     return srcParts.join('\n');
@@ -72,7 +68,28 @@ class _TsEmitterVisitor extends AbstractEmitterVisitor implements o.TypeVisitor 
   }
 
   visitLiteralExpr(ast: o.LiteralExpr, ctx: EmitterVisitorContext): any {
-    super.visitLiteralExpr(ast, ctx, '(null as any)');
+    const value = ast.value;
+    if (isBlank(value) && ast.type != o.NULL_TYPE) {
+      ctx.print(`(${value} as any)`);
+      return null;
+    }
+    return super.visitLiteralExpr(ast, ctx);
+  }
+
+
+  // Temporary workaround to support strictNullCheck enabled consumers of ngc emit.
+  // In SNC mode, [] have the type never[], so we cast here to any[].
+  // TODO: narrow the cast to a more explicit type, or use a pattern that does not
+  // start with [].concat. see https://github.com/angular/angular/pull/11846
+  visitLiteralArrayExpr(ast: o.LiteralArrayExpr, ctx: EmitterVisitorContext): any {
+    if (ast.entries.length === 0) {
+      ctx.print('(');
+    }
+    const result = super.visitLiteralArrayExpr(ast, ctx);
+    if (ast.entries.length === 0) {
+      ctx.print(' as any[])');
+    }
+    return result;
   }
 
   visitExternalExpr(ast: o.ExternalExpr, ctx: EmitterVisitorContext): any {
@@ -216,7 +233,7 @@ class _TsEmitterVisitor extends AbstractEmitterVisitor implements o.TypeVisitor 
     ctx.decIndent();
     ctx.println(`} catch (${CATCH_ERROR_VAR.name}) {`);
     ctx.incIndent();
-    var catchStmts =
+    const catchStmts =
         [<o.Statement>CATCH_STACK_VAR.set(CATCH_ERROR_VAR.prop('stack')).toDeclStmt(null, [
           o.StmtModifier.Final
         ])].concat(stmt.catchStmts);
@@ -227,7 +244,7 @@ class _TsEmitterVisitor extends AbstractEmitterVisitor implements o.TypeVisitor 
   }
 
   visitBuiltintType(type: o.BuiltinType, ctx: EmitterVisitorContext): any {
-    var typeStr: any /** TODO #9100 */;
+    let typeStr: string;
     switch (type.name) {
       case o.BuiltinTypeName.Bool:
         typeStr = 'boolean';
@@ -273,7 +290,7 @@ class _TsEmitterVisitor extends AbstractEmitterVisitor implements o.TypeVisitor 
   }
 
   getBuiltinMethodName(method: o.BuiltinMethod): string {
-    var name: string;
+    let name: string;
     switch (method) {
       case o.BuiltinMethod.ConcatArray:
         name = 'concat';
@@ -291,7 +308,7 @@ class _TsEmitterVisitor extends AbstractEmitterVisitor implements o.TypeVisitor 
   }
 
   private _visitParams(params: o.FnParam[], ctx: EmitterVisitorContext): void {
-    this.visitAllObjects((param: any /** TODO #9100 */) => {
+    this.visitAllObjects(param => {
       ctx.print(param.name);
       ctx.print(':');
       this.visitType(param.type, ctx);
@@ -304,7 +321,7 @@ class _TsEmitterVisitor extends AbstractEmitterVisitor implements o.TypeVisitor 
       throw new Error(`Internal error: unknown identifier ${value}`);
     }
     if (isPresent(value.moduleUrl) && value.moduleUrl != this._moduleUrl) {
-      var prefix = this.importsWithPrefixes.get(value.moduleUrl);
+      let prefix = this.importsWithPrefixes.get(value.moduleUrl);
       if (isBlank(prefix)) {
         prefix = `import${this.importsWithPrefixes.size}`;
         this.importsWithPrefixes.set(value.moduleUrl, prefix);
@@ -320,8 +337,7 @@ class _TsEmitterVisitor extends AbstractEmitterVisitor implements o.TypeVisitor 
     }
     if (isPresent(typeParams) && typeParams.length > 0) {
       ctx.print(`<`);
-      this.visitAllObjects(
-          (type: any /** TODO #9100 */) => type.visitType(this, ctx), typeParams, ctx, ',');
+      this.visitAllObjects(type => type.visitType(this, ctx), typeParams, ctx, ',');
       ctx.print(`>`);
     }
   }

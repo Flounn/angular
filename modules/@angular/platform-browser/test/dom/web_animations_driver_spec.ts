@@ -6,14 +6,13 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {beforeEach, beforeEachProviders, ddescribe, describe, expect, iit, inject, it, xdescribe, xit} from '@angular/core/testing/testing_internal';
+import {AnimationPlayer} from '@angular/core';
 import {el} from '@angular/platform-browser/testing/browser_util';
 
 import {DomAnimatePlayer} from '../../src/dom/dom_animate_player';
 import {WebAnimationsDriver} from '../../src/dom/web_animations_driver';
 import {WebAnimationsPlayer} from '../../src/dom/web_animations_player';
-import {StringMapWrapper} from '../../src/facade/collection';
-import {AnimationKeyframe, AnimationStyles} from '../../src/private_import_core';
+import {AnimationKeyframe, AnimationStyles, NoOpAnimationPlayer} from '../../src/private_import_core';
 import {MockDomAnimatePlayer} from '../../testing/mock_dom_animate_player';
 
 class ExtendedWebAnimationsDriver extends WebAnimationsDriver {
@@ -39,84 +38,58 @@ function _makeKeyframe(
 
 export function main() {
   describe('WebAnimationsDriver', () => {
-    var driver: ExtendedWebAnimationsDriver;
-    var elm: HTMLElement;
+    let driver: ExtendedWebAnimationsDriver;
+    let elm: HTMLElement;
     beforeEach(() => {
       driver = new ExtendedWebAnimationsDriver();
       elm = el('<div></div>');
     });
 
-    it('should convert all styles to camelcase', () => {
-      var startingStyles = _makeStyles({'border-top-right': '40px'});
-      var styles = [
-        _makeKeyframe(0, {'max-width': '100px', 'height': '200px'}),
-        _makeKeyframe(1, {'font-size': '555px'})
-      ];
-
-      var player = driver.animate(elm, startingStyles, styles, 0, 0, 'linear');
-      var details = _formatOptions(player);
-      var startKeyframe = details['keyframes'][0];
-      var firstKeyframe = details['keyframes'][1];
-      var lastKeyframe = details['keyframes'][2];
-
-      expect(startKeyframe['borderTopRight']).toEqual('40px');
-
-      expect(firstKeyframe['maxWidth']).toEqual('100px');
-      expect(firstKeyframe['max-width']).toBeFalsy();
-      expect(firstKeyframe['height']).toEqual('200px');
-
-      expect(lastKeyframe['fontSize']).toEqual('555px');
-      expect(lastKeyframe['font-size']).toBeFalsy();
-    });
-
-    it('should auto prefix numeric properties with a `px` value', () => {
-      var startingStyles = _makeStyles({'borderTopWidth': 40});
-      var styles = [_makeKeyframe(0, {'font-size': 100}), _makeKeyframe(1, {'height': '555em'})];
-
-      var player = driver.animate(elm, startingStyles, styles, 0, 0, 'linear');
-      var details = _formatOptions(player);
-      var startKeyframe = details['keyframes'][0];
-      var firstKeyframe = details['keyframes'][1];
-      var lastKeyframe = details['keyframes'][2];
-
-      expect(startKeyframe['borderTopWidth']).toEqual('40px');
-
-      expect(firstKeyframe['fontSize']).toEqual('100px');
-
-      expect(lastKeyframe['height']).toEqual('555em');
-    });
-
     it('should use a fill mode of `both`', () => {
-      var startingStyles = _makeStyles({});
-      var styles = [_makeKeyframe(0, {'color': 'green'}), _makeKeyframe(1, {'color': 'red'})];
-
-      var player = driver.animate(elm, startingStyles, styles, 1000, 1000, 'linear');
-      var details = _formatOptions(player);
-      var options = details['options'];
+      const startingStyles = _makeStyles({});
+      const styles = [_makeKeyframe(0, {'color': 'green'}), _makeKeyframe(1, {'color': 'red'})];
+      const player = driver.animate(elm, startingStyles, styles, 1000, 1000, 'linear', []);
+      const details = _formatOptions(player);
+      const options = details['options'];
       expect(options['fill']).toEqual('both');
     });
 
     it('should apply the provided easing', () => {
-      var startingStyles = _makeStyles({});
-      var styles = [_makeKeyframe(0, {'color': 'green'}), _makeKeyframe(1, {'color': 'red'})];
-
-      var player = driver.animate(elm, startingStyles, styles, 1000, 1000, 'ease-out');
-      var details = _formatOptions(player);
-      var options = details['options'];
+      const startingStyles = _makeStyles({});
+      const styles = [_makeKeyframe(0, {'color': 'green'}), _makeKeyframe(1, {'color': 'red'})];
+      const player = driver.animate(elm, startingStyles, styles, 1000, 1000, 'ease-out', []);
+      const details = _formatOptions(player);
+      const options = details['options'];
       expect(options['easing']).toEqual('ease-out');
     });
 
     it('should only apply the provided easing if present', () => {
-      var startingStyles = _makeStyles({});
-      var styles = [_makeKeyframe(0, {'color': 'green'}), _makeKeyframe(1, {'color': 'red'})];
-
-      var player = driver.animate(elm, startingStyles, styles, 1000, 1000, null);
-      var details = _formatOptions(player);
-      var options = details['options'];
-      var keys = StringMapWrapper.keys(options);
+      const startingStyles = _makeStyles({});
+      const styles = [_makeKeyframe(0, {'color': 'green'}), _makeKeyframe(1, {'color': 'red'})];
+      const player = driver.animate(elm, startingStyles, styles, 1000, 1000, null, []);
+      const details = _formatOptions(player);
+      const options = details['options'];
+      const keys = Object.keys(options);
       expect(keys.indexOf('easing')).toEqual(-1);
     });
+
+    it('should only apply the provided easing if present', () => {
+      const previousPlayers = [
+        new NoOpAnimationPlayerWithStyles(),
+        new NoOpAnimationPlayerWithStyles(),
+        new NoOpAnimationPlayerWithStyles(),
+      ];
+      const startingStyles = _makeStyles({});
+      const styles = [_makeKeyframe(0, {}), _makeKeyframe(1, {})];
+      const player = driver.animate(
+          elm, startingStyles, styles, 1000, 1000, null, <AnimationPlayer[]>previousPlayers);
+      expect(player.previousStyles).toEqual({});
+    });
   });
+}
+
+class NoOpAnimationPlayerWithStyles extends NoOpAnimationPlayer {
+  private _captureStyles() { return {color: 'red'}; }
 }
 
 function _formatOptions(player: WebAnimationsPlayer): {[key: string]: any} {

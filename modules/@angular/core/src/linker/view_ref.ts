@@ -17,7 +17,7 @@ import {AppView} from './view';
 /**
  * @stable
  */
-export abstract class ViewRef {
+export abstract class ViewRef extends ChangeDetectorRef {
   get destroyed(): boolean { return <boolean>unimplemented(); }
 
   abstract onDestroy(callback: Function): any /** TODO #9100 */;
@@ -117,7 +117,12 @@ export class ViewRef_<C> implements EmbeddedViewRef<C>, ChangeDetectorRef {
     this.markForCheck();
   }
 
-  onDestroy(callback: Function) { this._view.disposables.push(callback); }
+  onDestroy(callback: Function) {
+    if (!this._view.disposables) {
+      this._view.disposables = [];
+    }
+    this._view.disposables.push(callback);
+  }
 
-  destroy() { this._view.destroy(); }
+  destroy() { this._view.detachAndDestroy(); }
 }
